@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的档案</title>
+    <style>
+        body, html { width: 100%; height: 100%; margin: 0; background: #f5f5f5; display: flex; justify-content: center; font-family: 'Courier New', Courier, monospace; }
+        #phone-container { width: 100%; max-width: 400px; height: 100%; background: #f5f5f5; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        .header { padding: 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
+        .header .title { font-size: 18px; font-weight: bold; }
+        .header .back { color: #888; cursor: pointer; font-size: 14px; }
+
+        .content { padding: 20px; display: flex; flex-direction: column; align-items: center; flex: 1; }
+        
+        .avatar-box { width: 100px; height: 100px; border-radius: 50%; background: #ccc; border: 3px solid #ddd; overflow: hidden; cursor: pointer; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .avatar-box .placeholder { font-size: 40px; color: #fff; background: #4f9eff; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+
+        .form-group { width: 100%; background: #fff; border-radius: 8px; border: 1px solid #ddd; padding: 15px; box-sizing: border-box; }
+        .form-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .form-row:last-child { border-bottom: none; display: block; }
+        .form-row label { width: 60px; font-weight: bold; font-size: 14px; flex-shrink: 0; }
+        .form-row input { flex: 1; border: none; outline: none; font-family: inherit; font-size: 14px; padding: 0 10px; }
+        .form-row textarea { width: 100%; margin-top: 5px; border: 1px solid #eee; border-radius: 6px; padding: 8px; font-family: inherit; resize: vertical; box-sizing: border-box; }
+
+        .save-btn { width: 100%; padding: 14px; background: #4f9eff; color: #fff; border: none; border-radius: 8px; margin-top: 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="phone-container">
+        <div class="header">
+            <div class="title">🕴️ 我的档案</div>
+            <div class="back" onclick="window.location.href='index.html'">返回主页</div>
+        </div>
+        <div class="content">
+            <div class="avatar-box" onclick="document.getElementById('avatar-upload').click()">
+                <div class="placeholder" id="ph">👤</div>
+                <img id="avatar-img" src="">
+            </div>
+            <input type="file" id="avatar-upload" accept="image/*" style="display:none;">
+            
+            <div class="form-group">
+                <div class="form-row"><label>名字</label><input id="f-name" placeholder="输入名字"></div>
+                <div class="form-row"><label>代号</label><input id="f-code" placeholder="输入代号"></div>
+                <div class="form-row"><label style="width:100%; margin-bottom:5px;">外貌</label><textarea id="f-look" rows="2" placeholder="描述外貌..."></textarea></div>
+                <div class="form-row"><label style="width:100%; margin-bottom:5px;">经历</label><textarea id="f-history" rows="2" placeholder="描述经历..."></textarea></div>
+            </div>
+            
+            <button class="save-btn" onclick="saveProfile()">保存并载入世界书</button>
+        </div>
+    </div>
+    <script>
+        // 加载数据
+        function loadData() {
+            const d = JSON.parse(localStorage.getItem('myPhoneProfile'));
+            if(d) {
+                if(d.avatar) { document.getElementById('avatar-img').src = d.avatar; document.getElementById('avatar-img').style.display='block'; document.getElementById('ph').style.display='none'; }
+                document.getElementById('f-name').value = d.name || '';
+                document.getElementById('f-code').value = d.code || '';
+                document.getElementById('f-look').value = d.look || '';
+                document.getElementById('f-history').value = d.history || '';
+            }
+        }
+        
+        // 上传头像
+        document.getElementById('avatar-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    document.getElementById('avatar-img').src = ev.target.result;
+                    document.getElementById('avatar-img').style.display = 'block';
+                    document.getElementById('ph').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function saveProfile() {
+            const data = {
+                avatar: document.getElementById('avatar-img').src,
+                name: document.getElementById('f-name').value,
+                code: document.getElementById('f-code').value,
+                look: document.getElementById('f-look').value,
+                history: document.getElementById('f-history').value
+            };
+            localStorage.setItem('myPhoneProfile', JSON.stringify(data));
+            alert("✅ 档案保存成功！");
+        }
+        loadData();
+    </script>
+</body>
+</html>

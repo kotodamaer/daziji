@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>联系人</title>
+    <style>
+        body, html { width: 100%; height: 100%; margin: 0; background: #f5f5f5; display: flex; justify-content: center; font-family: 'Courier New', Courier, monospace; }
+        #phone-container { width: 100%; max-width: 400px; height: 100%; background: #f5f5f5; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        .header { padding: 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        .header .title { font-size: 18px; font-weight: bold; }
+        .header .back { color: #888; cursor: pointer; font-size: 14px; }
+        
+        #contact-list { padding: 10px; flex: 1; }
+        .contact-item { display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
+        .contact-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; }
+        .contact-item .info .name { font-weight: bold; font-size: 15px; }
+        .contact-item .info .desc { font-size: 12px; color: #888; margin-top: 2px; }
+
+        #add-btn { width: 40px; height: 40px; background: #4f9eff; color: #fff; border: none; border-radius: 50%; font-size: 24px; cursor: pointer; }
+        
+        /* 添加浮窗 */
+        #overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 20; }
+        #form-box { width: 90%; max-width: 350px; background: #fff; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; }
+        #form-box h3 { margin-top: 0; text-align: center; }
+        #form-box label { display: block; font-size: 14px; margin-top: 12px; color: #555; }
+        #form-box input, #form-box textarea { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        #form-box textarea { height: 60px; resize: none; }
+        #form-box button { width: 100%; padding: 12px; background: #4f9eff; color: #fff; border: none; border-radius: 8px; margin-top: 20px; font-size: 16px; cursor: pointer; }
+        #form-box .close-btn { text-align: right; cursor: pointer; color: #888; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="phone-container">
+        <div class="header">
+            <div class="title">👤 联系人</div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="add-btn" onclick="openForm()">➕</button>
+                <div class="back" onclick="window.location.href='index.html'">返回主页</div>
+            </div>
+        </div>
+        <div id="contact-list"></div>
+    </div>
+
+    <!-- 添加表单浮窗 -->
+    <div id="overlay">
+        <div id="form-box">
+            <div class="close-btn" onclick="closeForm()">✕ 关闭</div>
+            <h3>添加联系人档案</h3>
+            
+            <label>姓名 (必填)</label>
+            <input id="f-name" placeholder="请输入姓名">
+            
+            <label>代号</label>
+            <input id="f-code" placeholder="请输入代号">
+            
+            <label>头像 (输入图片URL)</label>
+            <input id="f-avatar" placeholder="https://...">
+            
+            <label>外貌</label>
+            <textarea id="f-look" placeholder="描述外貌..."></textarea>
+            
+            <label>性格</label>
+            <textarea id="f-personality" placeholder="描述性格..."></textarea>
+            
+            <label>经历</label>
+            <textarea id="f-history" placeholder="描述经历..."></textarea>
+            
+            <button onclick="addContact()">确定添加</button>
+        </div>
+    </div>
+
+    <script>
+        function render() {
+            const container = document.getElementById('contact-list');
+            container.innerHTML = '';
+            const contacts = JSON.parse(localStorage.getItem('myPhoneContacts')) || [];
+            if(contacts.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888; margin-top:50px;">暂无联系人<br>点击右上角➕添加</div>';
+                return;
+            }
+            contacts.reverse().forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.innerHTML = `
+                    <img src="${c.avatar || 'https://ui-avatars.com/api/?name='+encodeURIComponent(c.name)+'&background=333&color=fff&size=100'}">
+                    <div class="info"><div class="name">${c.name}</div><div class="desc">${c.code || c.look || '暂无描述'}</div></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function openForm() { document.getElementById('overlay').style.display = 'flex'; }
+        function closeForm() { document.getElementById('overlay').style.display = 'none'; }
+
+        function addContact() {
+            const name = document.getElementById('f-name').value.trim();
+            if (!name) { alert("请输入姓名！"); return; }
+            const newC = {
+                id: Date.now(),
+                name: name,
+                code: document.getElementById('f-code').value.trim(),
+                avatar: document.getElementById('f-avatar').value.trim(),
+                look: document.getElementById('f-look').value.trim(),
+                personality: document.getElementById('f-personality').value.trim(),
+                history: document.getElementById('f-history').value.trim(),
+                bgImage: null
+            };
+            let list = JSON.parse(localStorage.getItem('myPhoneContacts')) || [];
+            list.push(newC);
+            localStorage.setItem('myPhoneContacts', JSON.stringify(list));
+            closeForm();
+            render();
+            // 清空表单
+            document.querySelectorAll('#form-box input, #form-box textarea').forEach(i => i.value = '');
+        }
+        render();
+    </script>
+</body>
+</html>

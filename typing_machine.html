@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>打字机</title>
+    <style>
+        body, html { width: 100%; height: 100%; margin: 0; background: #f5f5f5; display: flex; justify-content: center; font-family: 'Courier New', Courier, monospace; }
+        #phone-container { width: 100%; max-width: 400px; height: 100%; position: relative; background: #f5f5f0; display: flex; flex-direction: column; }
+        
+        .header { padding: 15px; border-bottom: 1px solid #ddd; background: #fff; display: flex; align-items: center; font-size: 18px; font-weight: bold; }
+        .header .back { color: #333; cursor: pointer; margin-right: 15px; font-size: 20px; }
+        
+        #msg-list-container { flex: 1; overflow-y: auto; padding: 10px; background: #f5f5f5; }
+        .msg-list-item { display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 8px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .msg-list-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; }
+        .msg-list-item .info .name { font-size: 15px; font-weight: bold; color: #222; }
+        .msg-list-item .info .desc { font-size: 12px; color: #777; margin-top: 4px; }
+
+        /* 聊天室 */
+        #chat-room { display: none; flex-direction: column; height: 100%; position: absolute; top: 0; left: 0; width: 100%; background: #f5f5f0; }
+        #chat-room .header { justify-content: space-between; }
+        #chat-room .content { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg-row { display: flex; align-items: flex-start; margin-bottom: 12px; width: 100%; }
+        .msg-row.sent { flex-direction: row-reverse; }
+        .msg-row.received { flex-direction: row; }
+        .msg-avatar { width: 40px; height: 40px; border-radius: 50%; margin: 0 10px; }
+        .msg-avatar.hidden { opacity: 0; }
+        .msg-bubble { max-width: 70%; padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+        .msg-row.sent .msg-bubble { background: #333; color: #fff; }
+        .msg-row.received .msg-bubble { background: #fff; border: 1px solid #ddd; color: #333; }
+
+        .footer { display: flex; align-items: center; padding: 10px; background: #fff; border-top: 1px solid #ddd; flex-shrink: 0; }
+        .footer input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px; outline: none; margin-right: 8px; }
+        .footer .btn { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #555; padding: 0 5px; }
+    </style>
+</head>
+<body>
+    <div id="phone-container">
+        <!-- 列表页 -->
+        <div id="msg-home">
+            <div class="header">
+                <div class="back" onclick="window.location.href='index.html'">← 返回桌面</div>
+                <div>📜 打字机</div>
+            </div>
+            <div id="msg-list-container"></div>
+        </div>
+
+        <!-- 聊天页 -->
+        <div id="chat-room">
+            <div class="header">
+                <div class="back" onclick="closeChat()">← 返回</div>
+                <div id="chat-name">聊天中</div>
+                <div style="width:20px;"></div>
+            </div>
+            <div class="content" id="chat-messages">
+                <div style="text-align:center; color:#bbb; margin-top:50px;">选择联系人开始聊天</div>
+            </div>
+            <div class="footer">
+                <input id="msg-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendMsg()">
+                <button class="btn" onclick="sendMsg()">➤</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentContact = null;
+        let chatHistory = {};
+
+        // 加载联系人
+        function loadContacts() {
+            const container = document.getElementById('msg-list-container');
+            container.innerHTML = '';
+            const contacts = JSON.parse(localStorage.getItem('myPhoneContacts')) || [];
+            if (contacts.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">暂无联系人，请先在“联系人”App添加</div>';
+                return;
+            }
+            contacts.reverse().forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'msg-list-item';
+                div.innerHTML = `
+                    <img src="${c.avatar || 'https://ui-avatars.com/api/?name='+encodeURIComponent(c.name)+'&background=333&color=fff&size=100'}">
+                    <div class="info"><div class="name">${c.name}</div><div class="desc">${c.look || '暂无描述'}</div></div>
+                `;
+                div.onclick = () => openChat(c);
+                container.appendChild(div);
+            });
+        }
+
+        // 进入聊天
+        function openChat(contact) {
+            currentContact = contact;
+            document.getElementById('msg-home').style.display = 'none';
+            document.getElementById('chat-room').style.display = 'flex';
+            document.getElementById('chat-name').innerText = contact.name;
+            renderMessages(contact.id);
+        }
+
+        // 退出聊天
+        function closeChat() {
+            document.getElementById('chat-room').style.display = 'none';
+            document.getElementById('msg-home').style.display = 'flex';
+            loadContacts();
+        }
+
+        // 渲染气泡
+        function renderMessages(id) {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            const history = chatHistory[id] || [];
+            const myAvatar = 'https://ui-avatars.com/api/?name=User&background=4f9eff&color=fff';
+            const partnerAvatar = currentContact?.avatar || 'https://ui-avatars.com/api/?name='+encodeURIComponent(currentContact?.name||'')+'&background=333&color=fff&size=100';
+
+            history.forEach((msg, i) => {
+                const row = document.createElement('div');
+                row.className = `msg-row ${msg.isMe ? 'sent' : 'received'}`;
+                const avatar = document.createElement('img');
+                avatar.className = 'msg-avatar';
+                avatar.src = msg.isMe ? myAvatar : partnerAvatar;
+                if (i > 0 && history[i-1].isMe === msg.isMe) avatar.classList.add('hidden');
+                const bubble = document.createElement('div');
+                bubble.className = 'msg-bubble';
+                bubble.innerText = msg.text;
+                row.appendChild(avatar); row.appendChild(bubble);
+                container.appendChild(row);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMsg() {
+            if (!currentContact) return;
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!chatHistory[currentContact.id]) chatHistory[currentContact.id] = [];
+            chatHistory[currentContact.id].push({ text, isMe: true });
+            setTimeout(() => {
+                chatHistory[currentContact.id].push({ text: "收到啦！", isMe: false });
+                renderMessages(currentContact.id);
+            }, 800);
+            input.value = '';
+            renderMessages(currentContact.id);
+        }
+
+        loadContacts();
+    </script>
+</body>
+</html>
